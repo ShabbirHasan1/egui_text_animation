@@ -44,6 +44,7 @@ pub enum AnimationType {
 }
 
 /// A struct for creating and managing text animations.
+#[derive(Clone, Debug)]
 pub struct TextAnimator {
     text: String,
     pub font: FontId,
