@@ -2,6 +2,11 @@
 name = "egui_text_animation"
 version = "0.1.0"
 edition = "2024"
+authors = ["dest4590"]
+description = "A simple text animation using egui"
+license = "GPL-3.0-only"
+license-file = "LICENSE"
+repository = "https://github.com/dest4590/egui_text_animation"
 
 [dependencies]
 eframe = "0.31.0"
