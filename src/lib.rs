@@ -46,13 +46,13 @@ pub enum AnimationType {
 /// A struct for creating and managing text animations.
 #[derive(Clone, Debug)]
 pub struct TextAnimator {
-    text: String,
+    pub text: String,
     pub font: FontId,
-    color: Color32,
-    timer: f32,
-    speed: f32,
-    animation_finished: bool,
-    animation_type: AnimationType,
+    pub color: Color32,
+    pub timer: f32,
+    pub speed: f32,
+    pub animation_finished: bool,
+    pub animation_type: AnimationType,
 }
 
 impl Default for TextAnimator {
