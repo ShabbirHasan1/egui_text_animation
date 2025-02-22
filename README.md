@@ -112,9 +112,7 @@ The `AnimationType` enum provides the following animation types:
 
 ## API Reference
 
-See the [docs.rs documentation](<https://docs.rs/egui-text-animation>) for a complete API reference.  (Note: This link
-will only work *after* you publish the crate to crates.io.) If you haven't published, you can generate local
-documentation with `cargo doc --open`.
+See the [docs.rs documentation](<https://docs.rs/egui-text-animation>) for a complete API reference.
 
 ## Notes
 
