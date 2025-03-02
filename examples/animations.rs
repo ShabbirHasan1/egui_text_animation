@@ -19,6 +19,7 @@ fn main() -> eframe::Result<()> {
 struct MyApp {
     fade_animator: TextAnimator,
     typewriter_animator: TextAnimator,
+    hacker_animator: TextAnimator,
     animation_running: bool,
     speed: f32,
     selected_animation: AnimationType, // Store the selected animation type
@@ -36,15 +37,22 @@ impl Default for MyApp {
             ),
 
             typewriter_animator: TextAnimator::new(
-                "Hello, Fade In!",
+                "Hello, Typewriter!",
                 egui::FontId::new(18.0, egui::FontFamily::Proportional),
                 egui::Color32::WHITE,
                 0.5,
                 AnimationType::Typewriter,
             ),
+            hacker_animator: TextAnimator::new(
+                "Access Granted",
+                egui::FontId::new(18.0, egui::FontFamily::Proportional),
+                egui::Color32::GREEN,
+                2.0, // Hacker animation often looks better a bit faster
+                AnimationType::Hacker,
+            ),
 
             animation_running: false,
-            speed: 0.5,                                // Initial speed
+            speed: 2.0,                                // Initial speed
             selected_animation: AnimationType::FadeIn, // Default to FadeIn
         }
     }
@@ -66,6 +74,11 @@ impl eframe::App for MyApp {
                     AnimationType::Typewriter,
                     "Typewriter",
                 );
+                ui.radio_value(
+                    &mut self.selected_animation,
+                    AnimationType::Hacker,
+                    "Hacker",
+                );
             });
 
             // --- Start/Stop Buttons ---
@@ -76,6 +89,7 @@ impl eframe::App for MyApp {
                     match self.selected_animation {
                         AnimationType::FadeIn => self.fade_animator.reset(),
                         AnimationType::Typewriter => self.typewriter_animator.reset(),
+                        AnimationType::Hacker => self.hacker_animator.reset(),
                     }
                 }
                 if ui.button("Stop Animation").clicked() {
@@ -93,6 +107,7 @@ impl eframe::App for MyApp {
                     // Update speed for *all* animators
                     self.fade_animator.set_speed(self.speed);
                     self.typewriter_animator.set_speed(self.speed);
+                    self.hacker_animator.set_speed(self.speed);
                 }
             });
 
@@ -106,6 +121,7 @@ impl eframe::App for MyApp {
                 {
                     self.fade_animator.font.size = font_size;
                     self.typewriter_animator.font.size = font_size;
+                    self.hacker_animator.font.size = font_size;
                 }
             });
 
@@ -122,6 +138,11 @@ impl eframe::App for MyApp {
                         let finished = self.typewriter_animator.is_animation_finished();
                         (&mut self.typewriter_animator, finished)
                     }
+                    AnimationType::Hacker => {
+                        self.hacker_animator.process_animation(ctx);
+                        let finished = self.hacker_animator.is_animation_finished();
+                        (&mut self.hacker_animator, finished)
+                    }
                 };
                 animator.render(ui);
 
@@ -129,9 +150,11 @@ impl eframe::App for MyApp {
                     ctx.request_repaint();
                 }
             } else {
+                // static render
                 match self.selected_animation {
                     AnimationType::FadeIn => self.fade_animator.render(ui),
                     AnimationType::Typewriter => self.typewriter_animator.render(ui),
+                    AnimationType::Hacker => self.hacker_animator.render(ui),
                 };
             }
 
@@ -139,6 +162,7 @@ impl eframe::App for MyApp {
                 && match self.selected_animation {
                     AnimationType::FadeIn => self.fade_animator.is_animation_finished(),
                     AnimationType::Typewriter => self.typewriter_animator.is_animation_finished(),
+                    AnimationType::Hacker => self.hacker_animator.is_animation_finished(),
                 }
             {
                 ui.label("Animation finished!");

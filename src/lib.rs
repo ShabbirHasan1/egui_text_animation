@@ -9,6 +9,7 @@
 //!
 //! *   **Fade-in Animation:** Animate text to gradually appear, character by character.  See [`AnimationType::FadeIn`].
 //! *   **Typewriter Animation:** Animate text to appear as if it's being typed.  See [`AnimationType::Typewriter`].
+//! *   **Hacker Animation:** Animate text to appear as if it's being decoded.  See [`AnimationType::Hacker`].
 //! *   **Customizable Speed:** Control the speed of the animation with [`TextAnimator::set_speed`].
 //! *   **Easy Integration:** Simply create a [`TextAnimator`], call [`TextAnimator::process_animation`] each frame,
 //!     and then render with [`TextAnimator::render`].
@@ -22,6 +23,7 @@
 //!
 //! *   [`AnimationType::FadeIn`]:  Characters gradually fade in from transparent to fully opaque.
 //! *   [`AnimationType::Typewriter`]: Characters appear one by one, simulating a typewriter effect.
+//! *   [`AnimationType::Hacker`]: Characters cycle through random characters before settling on the final character.
 //!
 //! # Notes
 //!
@@ -33,6 +35,7 @@
 
 use eframe::epaint::text::{LayoutJob, TextFormat};
 use eframe::epaint::{Color32, FontFamily, FontId};
+use rand::prelude::*;
 
 /// Enum representing the available animation types.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -41,6 +44,8 @@ pub enum AnimationType {
     FadeIn,
     /// Characters appear one by one, simulating a typewriter effect.
     Typewriter,
+    /// Characters cycle through random characters before settling on the final character.
+    Hacker,
 }
 
 /// A struct for creating and managing text animations.
@@ -53,6 +58,7 @@ pub struct TextAnimator {
     pub speed: f32,
     pub animation_finished: bool,
     pub animation_type: AnimationType,
+    intermediate_text: Vec<char>,
 }
 
 impl Default for TextAnimator {
@@ -65,6 +71,7 @@ impl Default for TextAnimator {
             speed: 2.5,
             animation_finished: false,
             animation_type: AnimationType::FadeIn,
+            intermediate_text: Vec::new(),
         }
     }
 }
@@ -86,6 +93,7 @@ impl TextAnimator {
         speed: f32,
         animation_type: AnimationType,
     ) -> Self {
+        let intermediate_text = vec![' '; text.len()]; // Initialize with spaces
         Self {
             text: text.to_string(),
             font,
@@ -94,6 +102,7 @@ impl TextAnimator {
             speed,
             animation_finished: false,
             animation_type,
+            intermediate_text,
         }
     }
 
@@ -110,6 +119,9 @@ impl TextAnimator {
     pub fn reset(&mut self) {
         self.timer = 0.0;
         self.animation_finished = false;
+        if self.animation_type == AnimationType::Hacker {
+            self.intermediate_text = vec![' '; self.text.len()];
+        }
     }
 
     /// Processes the animation, updating the internal timer based on the elapsed time
@@ -124,12 +136,45 @@ impl TextAnimator {
         }
 
         let dt = ctx.input(|i| i.unstable_dt);
-        // Adjust timer increment based on animation type and speed.
         let increment = dt * self.speed;
-        self.timer = (self.timer + increment).min(1.0);
 
-        if self.timer >= 1.0 {
-            self.animation_finished = true;
+        if self.animation_type == AnimationType::Hacker {
+            let chars: Vec<char> = self.text.chars().collect();
+            let num_chars = chars.len();
+            let visible_chars = (self.timer * num_chars as f32).floor() as usize;
+
+            let mut rng = rand::rng();
+
+            for i in 0..visible_chars.min(num_chars) {
+                if self.intermediate_text.get(i) != chars.get(i) {
+                    let random_char = rng.random_range(33..=126) as u8 as char;
+                    if let Some(intermediate_char) = self.intermediate_text.get_mut(i) {
+                        *intermediate_char = random_char;
+                    }
+                }
+            }
+
+            let lock_threshold = 0.1;
+
+            for i in 0..visible_chars.min(num_chars) {
+                if self.intermediate_text.get(i) != chars.get(i)
+                    && rng.random_range(0.0..1.0) < lock_threshold
+                {
+                    if let Some(intermediate_char) = self.intermediate_text.get_mut(i) {
+                        *intermediate_char = chars[i];
+                    }
+                }
+            }
+
+            self.timer = (self.timer + increment).min(num_chars as f32);
+            if self.timer >= num_chars as f32 {
+                self.animation_finished = true;
+            }
+        } else {
+            self.timer = (self.timer + increment).min(1.0);
+            if self.timer >= 1.0 {
+                self.animation_finished = true;
+            }
         }
     }
 
@@ -148,6 +193,7 @@ impl TextAnimator {
         match self.animation_type {
             AnimationType::FadeIn => self.fade_in_text(ui),
             AnimationType::Typewriter => self.typewriter_text(ui),
+            AnimationType::Hacker => self.hacker_text(ui),
         }
     }
 
@@ -194,6 +240,30 @@ impl TextAnimator {
                     ..Default::default()
                 });
             } // No else clause needed - we simply don't add invisible characters
+        }
+        ui.label(job);
+    }
+
+    /// Renders the hacker text animation. Characters are rendered one by one, first showing
+    /// random characters and then the final character.
+    fn hacker_text(&self, ui: &mut egui::Ui) {
+        let mut job = LayoutJob::default();
+        for (i, &ch) in self.intermediate_text.iter().enumerate() {
+            // Check if we've reached the final character, and display it.
+            if self.text.chars().nth(i) == Some(ch) {
+                job.append(&ch.to_string(), 0.0, TextFormat {
+                    color: self.color,
+                    font_id: self.font.clone(),
+                    ..Default::default()
+                });
+            } else {
+                // Display the intermediate (random) character.
+                job.append(&ch.to_string(), 0.0, TextFormat {
+                    color: self.color, // Could make this a different color for "hacker" effect
+                    font_id: self.font.clone(),
+                    ..Default::default()
+                });
+            }
         }
         ui.label(job);
     }
